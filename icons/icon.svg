@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TR-808">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a2a32"/>
+      <stop offset="100%" stop-color="#121216"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#g)"/>
+  <rect x="48" y="48" width="416" height="416" rx="64" fill="#0a0a0c" stroke="#ff6a00" stroke-width="12"/>
+  <text x="256" y="230" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="72" font-weight="700" fill="#ff6a00" letter-spacing="8">TR-808</text>
+  <g fill="#e8322a">
+    <circle cx="128" cy="320" r="28"/>
+    <circle cx="208" cy="320" r="28"/>
+    <circle cx="288" cy="320" r="28"/>
+    <circle cx="368" cy="320" r="28"/>
+  </g>
+  <g fill="#ff7a1a" opacity="0.9">
+    <rect x="112" y="380" width="40" height="24" rx="4"/>
+    <rect x="192" y="380" width="40" height="24" rx="4"/>
+    <rect x="272" y="380" width="40" height="24" rx="4"/>
+    <rect x="352" y="380" width="40" height="24" rx="4"/>
+  </g>
+</svg>

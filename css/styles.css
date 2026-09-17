@@ -1,0 +1,417 @@
+/* TR-808 Progressive Web App — dark chassis, orange/red accents */
+
+:root {
+  --bg: #0a0a0c;
+  --chassis: #141418;
+  --panel: #1c1c22;
+  --edge: #2a2a32;
+  --text: #e8e4dc;
+  --muted: #8a8680;
+  --orange: #ff6a00;
+  --red: #e8322a;
+  --led-off: #2a1a10;
+  --led-on: #ff7a1a;
+  --led-play: #ffe066;
+  --pad-bg: #222228;
+  --pad-hi: #2e2e36;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+  font-family: "SF Mono", "Menlo", "Consolas", "Roboto Mono", ui-monospace, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(ellipse at top, #1a1510 0%, var(--bg) 55%);
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: none;
+  padding: max(8px, var(--safe-top)) 10px max(12px, var(--safe-bottom));
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+  touch-action: manipulation;
+}
+
+.app {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+/* —— Header —— */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, #1e1e24, var(--chassis));
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  margin-bottom: 12px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: clamp(1.1rem, 4vw, 1.45rem);
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  color: var(--orange);
+  text-shadow: 0 0 12px rgba(255, 106, 0, 0.35);
+}
+
+.brand .sub {
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+#audio-status {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #3a2010;
+  color: #ffb080;
+  border: 1px solid #5a3020;
+}
+
+#audio-status.ready {
+  background: #14301a;
+  color: #7dff9a;
+  border-color: #2a5030;
+}
+
+/* —— Controls —— */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.ctrl {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid #444;
+  background: linear-gradient(180deg, #333, #222);
+  color: var(--text);
+  padding: 10px 14px;
+  min-height: 44px;
+  min-width: 72px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.btn:active {
+  transform: translateY(1px);
+  filter: brightness(0.92);
+}
+
+.btn-play.active {
+  background: linear-gradient(180deg, #c44, #802);
+  border-color: #e55;
+  color: #fff;
+  box-shadow: 0 0 14px rgba(232, 50, 42, 0.45);
+}
+
+.btn-stop {
+  border-color: #555;
+}
+
+.btn-clear {
+  color: #f0a080;
+}
+
+label.ctrl span.lbl {
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+#bpm-val {
+  min-width: 2.2em;
+  color: var(--orange);
+  font-weight: 700;
+}
+
+input[type='range'] {
+  width: 100px;
+  max-width: 28vw;
+  accent-color: var(--orange);
+  height: 28px;
+}
+
+select#pattern {
+  appearance: none;
+  background: #1a1a20;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 10px 28px 10px 10px;
+  min-height: 44px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--orange) 50%),
+    linear-gradient(135deg, var(--orange) 50%, transparent 50%);
+  background-position: calc(100% - 14px) calc(50% - 3px), calc(100% - 9px) calc(50% - 3px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* —— Pads —— */
+.section-title {
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin: 0 0 8px 2px;
+}
+
+.pads {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+@media (min-width: 600px) {
+  .pads {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+  }
+}
+
+@media (min-width: 900px) {
+  .pads {
+    grid-template-columns: repeat(13, 1fr);
+  }
+}
+
+.pad {
+  appearance: none;
+  border: 2px solid #3a3a44;
+  border-radius: 10px;
+  background: linear-gradient(165deg, var(--pad-hi), var(--pad-bg));
+  min-height: 64px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #0c0c10, inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  touch-action: manipulation;
+  position: relative;
+  overflow: hidden;
+}
+
+.pad::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--pad-accent, var(--orange)) 35%, transparent);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.pad:active,
+.pad.hit {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #0c0c10, inset 0 0 24px color-mix(in srgb, var(--pad-accent, var(--orange)) 40%, transparent);
+  border-color: var(--pad-accent, var(--orange));
+  background: linear-gradient(165deg, #3a3028, #28201c);
+}
+
+.pad-id {
+  font-size: clamp(0.85rem, 3.2vw, 1.05rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--pad-accent, var(--orange));
+}
+
+.pad-name {
+  font-size: 0.55rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.15;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 2px;
+}
+
+@media (max-width: 380px) {
+  .pad-name {
+    display: none;
+  }
+  .pad {
+    min-height: 56px;
+  }
+}
+
+/* —— Sequencer —— */
+.seq-panel {
+  background: var(--chassis);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  padding: 10px 8px 12px;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.35);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#seq-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: min(100%, 720px);
+}
+
+.seq-row {
+  display: grid;
+  grid-template-columns: 40px repeat(16, minmax(28px, 1fr));
+  gap: 3px;
+  align-items: stretch;
+}
+
+@media (min-width: 700px) {
+  .seq-row {
+    grid-template-columns: 48px repeat(16, minmax(32px, 1fr));
+    gap: 4px;
+  }
+}
+
+.seq-header .seq-step-num {
+  font-size: 0.55rem;
+  text-align: center;
+  color: var(--muted);
+  padding: 2px 0;
+  border-radius: 3px;
+}
+
+.seq-header .seq-step-num.beat {
+  color: var(--orange);
+  font-weight: 700;
+}
+
+.seq-header .seq-step-num.playhead {
+  color: #111;
+  background: var(--led-play);
+}
+
+.seq-label {
+  appearance: none;
+  border: 1px solid #333;
+  background: #1a1a20;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--pad-accent, var(--orange));
+  min-height: 28px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.seq-cell {
+  appearance: none;
+  border: 1px solid #2a2a30;
+  background: var(--led-off);
+  border-radius: 4px;
+  min-height: 28px;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+.seq-cell.beat {
+  border-color: #3a3028;
+}
+
+.seq-cell.on {
+  background: radial-gradient(circle at 40% 35%, #ffb060, var(--led-on) 55%, #a04010);
+  border-color: #ff8a30;
+  box-shadow: 0 0 8px rgba(255, 120, 30, 0.55), inset 0 1px 0 rgba(255, 220, 160, 0.35);
+}
+
+.seq-cell.playhead {
+  outline: 2px solid var(--led-play);
+  outline-offset: -1px;
+}
+
+.seq-cell.on.playhead {
+  box-shadow: 0 0 12px rgba(255, 224, 102, 0.7), inset 0 1px 0 rgba(255, 240, 200, 0.5);
+}
+
+.footer-note {
+  margin-top: 12px;
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-align: center;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}
+
+/* Landscape phone: tighter pads */
+@media (orientation: landscape) and (max-height: 500px) {
+  .pad {
+    min-height: 48px;
+  }
+  .header {
+    margin-bottom: 6px;
+    padding: 6px 10px;
+  }
+  .controls {
+    margin-bottom: 6px;
+    padding: 6px;
+  }
+  .seq-cell,
+  .seq-label {
+    min-height: 22px;
+  }
+}

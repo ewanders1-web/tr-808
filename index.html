@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="TR-808" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0a0a0c" />
+    <meta name="description" content="Classic TR-808 style drum machine PWA — pads, sequencer, offline synth." />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+    <link rel="apple-touch-icon" href="icons/icon-180.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png" />
+    <title>TR-808 Drum Machine</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div class="brand">
+          <h1>TR-808</h1>
+          <div class="sub">Rhythm Composer · Web Audio</div>
+        </div>
+        <div id="audio-status">TAP TO ENABLE AUDIO</div>
+      </header>
+
+      <section class="controls" aria-label="Transport">
+        <button type="button" class="btn btn-play ctrl" id="btn-play">PLAY</button>
+        <button type="button" class="btn btn-stop ctrl" id="btn-stop">STOP</button>
+        <button type="button" class="btn btn-clear ctrl" id="btn-clear">CLEAR</button>
+
+        <label class="ctrl">
+          <span class="lbl">BPM</span>
+          <input type="range" id="bpm" min="60" max="180" value="110" />
+          <span id="bpm-val">110</span>
+        </label>
+
+        <label class="ctrl">
+          <span class="lbl">Vol</span>
+          <input type="range" id="volume" min="0" max="100" value="85" />
+        </label>
+
+        <label class="ctrl">
+          <span class="lbl">Pattern</span>
+          <select id="pattern" aria-label="Starter pattern">
+            <option value="">Custom</option>
+          </select>
+        </label>
+      </section>
+
+      <p class="section-title">Instruments</p>
+      <div class="pads" id="pads" role="group" aria-label="Drum pads"></div>
+
+      <p class="section-title">16-Step Sequencer</p>
+      <div class="seq-panel">
+        <div id="seq-grid" role="grid" aria-label="Step sequencer"></div>
+      </div>
+
+      <p class="footer-note">
+        Synthesized 808-style sounds · offline PWA · tap a pad or Play to unlock audio on iOS
+      </p>
+    </div>
+
+    <script src="js/audio.js"></script>
+    <script src="js/sequencer.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>

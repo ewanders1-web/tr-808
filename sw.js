@@ -1,5 +1,5 @@
 /* Minimal offline cache for TR-808 PWA */
-const CACHE = 'tr808-v1';
+const CACHE = 'tr808-v2';
 const ASSETS = [
   './',
   './index.html',

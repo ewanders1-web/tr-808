@@ -13,16 +13,33 @@
   const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
 
   let audioReady = false;
+  let silentEl = null;
+
+  function unlockHtmlAudio() {
+    // Extra iOS unlock path via HTMLAudioElement
+    try {
+      if (!silentEl) {
+        silentEl = new Audio(
+          'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
+        );
+        silentEl.setAttribute('playsinline', 'true');
+        silentEl.volume = 0.01;
+      }
+      const p = silentEl.play();
+      if (p && p.catch) p.catch(() => {});
+    } catch (_) {}
+  }
 
   async function unlockAudio() {
-    if (audioReady) return true;
+    unlockHtmlAudio();
     try {
       await machine.resume();
-      audioReady = machine.unlocked;
+      audioReady = machine.unlocked || (machine.ctx && machine.ctx.state === 'running');
       updateAudioBadge();
       return audioReady;
     } catch (e) {
       console.warn('Audio unlock failed', e);
+      updateAudioBadge();
       return false;
     }
   }
@@ -30,8 +47,13 @@
   function updateAudioBadge() {
     const el = $('#audio-status');
     if (!el) return;
-    el.textContent = audioReady ? 'AUDIO READY' : 'TAP TO ENABLE AUDIO';
-    el.classList.toggle('ready', audioReady);
+    if (audioReady) {
+      el.textContent = 'AUDIO ON · if silent, flip Ring switch';
+      el.classList.add('ready');
+    } else {
+      el.textContent = 'TAP A PAD TO ENABLE AUDIO';
+      el.classList.remove('ready');
+    }
   }
 
   // —— Build pads ——
@@ -54,8 +76,11 @@
         if (e.type === 'touchstart' && window.PointerEvent) return;
         if (e.type === 'mousedown' && (window.PointerEvent || e.sourceCapabilities?.firesTouchEvents)) return;
         e.preventDefault();
-        await unlockAudio();
+        unlockHtmlAudio();
+        // Kick AudioContext in this same gesture turn, then hit the pad
+        const pending = unlockAudio();
         machine.trigger(inst.id);
+        await pending;
         btn.classList.add('hit');
         clearTimeout(btn._hitT);
         btn._hitT = setTimeout(() => btn.classList.remove('hit'), 120);
@@ -161,7 +186,9 @@
     const patternSel = $('#pattern');
 
     playBtn.addEventListener('click', async () => {
+      unlockHtmlAudio();
       await unlockAudio();
+      machine.trigger('BD');
       if (!seq.playing) {
         seq.start();
         playBtn.classList.add('active');

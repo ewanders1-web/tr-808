@@ -27,26 +27,55 @@
       this.master = null;
       this.comp = null;
       this.unlocked = false;
-      this._volume = 0.85;
+      this._volume = 1.0;
       this._noiseBuffer = null;
     }
 
     async resume() {
       if (!this.ctx) this._init();
+      // Same-gesture kick: silent buffer + tiny tick (critical on iOS Safari)
+      this._gestureUnlock();
       if (this.ctx.state === 'suspended') {
-        await this.ctx.resume();
+        try {
+          await this.ctx.resume();
+        } catch (e) {
+          console.warn('AudioContext.resume failed', e);
+        }
       }
+      // Second kick after resume for stubborn iOS sessions
+      this._gestureUnlock();
       this.unlocked = this.ctx.state === 'running';
       return this.unlocked;
     }
 
+    _gestureUnlock() {
+      if (!this.ctx) return;
+      try {
+        const buf = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(this.ctx.destination);
+        src.start(0);
+      } catch (_) {}
+      try {
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        g.gain.value = 0.0001;
+        osc.connect(g);
+        g.connect(this.ctx.destination);
+        const t = this.ctx.currentTime;
+        osc.start(t);
+        osc.stop(t + 0.01);
+      } catch (_) {}
+    }
+
     _init() {
       const AC = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AC();
+      this.ctx = new AC({ latencyHint: 'interactive' });
       this.comp = this.ctx.createDynamicsCompressor();
-      this.comp.threshold.value = -18;
+      this.comp.threshold.value = -24;
       this.comp.knee.value = 12;
-      this.comp.ratio.value = 3;
+      this.comp.ratio.value = 2;
       this.comp.attack.value = 0.003;
       this.comp.release.value = 0.15;
       this.master = this.ctx.createGain();

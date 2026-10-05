@@ -388,6 +388,31 @@ select#pattern {
   box-shadow: 0 0 12px rgba(255, 224, 102, 0.7), inset 0 1px 0 rgba(255, 240, 200, 0.5);
 }
 
+/* 808-style accent track row */
+.seq-accent-row {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #2a2a30;
+}
+
+.seq-accent-label {
+  color: #ff5040;
+  border-color: #5a2620;
+  background: #1c1214;
+  cursor: default;
+  font-size: 0.55rem;
+}
+
+.seq-accent-cell.accent-on {
+  background: radial-gradient(circle at 40% 35%, #ff8a70, #e03020 55%, #801510);
+  border-color: #ff5040;
+  box-shadow: 0 0 8px rgba(255, 60, 40, 0.55), inset 0 1px 0 rgba(255, 200, 180, 0.35);
+}
+
+.seq-accent-cell.accent-on.playhead {
+  box-shadow: 0 0 12px rgba(255, 120, 90, 0.8), inset 0 1px 0 rgba(255, 220, 200, 0.5);
+}
+
 .footer-note {
   margin-top: 12px;
   font-size: 0.65rem;

@@ -145,7 +145,36 @@
       wrap.appendChild(row);
     });
 
+    buildAccentRow(wrap);
     renderGrid();
+  }
+
+  function buildAccentRow(wrap) {
+    // 808-style global accent track: one extra row, tap a step to accent it
+    const row = document.createElement('div');
+    row.className = 'seq-row seq-accent-row';
+    row.dataset.inst = 'ACC';
+    const label = document.createElement('div');
+    label.className = 'seq-label seq-accent-label';
+    label.textContent = 'ACC';
+    label.title = 'Accent — tap a step to make it hit harder';
+    row.appendChild(label);
+
+    for (let s = 0; s < STEPS; s++) {
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'seq-cell seq-accent-cell' + (s % 4 === 0 ? ' beat' : '');
+      cell.dataset.step = String(s);
+      cell.setAttribute('aria-label', `Accent step ${s + 1}`);
+      cell.addEventListener('pointerdown', async (e) => {
+        e.preventDefault();
+        await unlockAudio();
+        const on = seq.toggleAccent(s);
+        cell.classList.toggle('accent-on', !!on);
+      });
+      row.appendChild(cell);
+    }
+    wrap.appendChild(row);
   }
 
   function renderGrid() {
@@ -156,6 +185,13 @@
         cell.classList.toggle('on', !!(seq.grid[inst.id] && seq.grid[inst.id][s]));
       });
     });
+    // accent row
+    const accRow = $('.seq-accent-row');
+    if (accRow) {
+      $$('.seq-accent-cell', accRow).forEach((cell, s) => {
+        cell.classList.toggle('accent-on', !!seq.accent[s]);
+      });
+    }
   }
 
   function setPlayhead(step) {
@@ -220,6 +256,14 @@
       machine.volume = Number(volInput.value) / 100;
     });
     machine.volume = Number(volInput.value) / 100;
+
+    // 808-style accent amount knob
+    const accentInput = $('#accent');
+    const syncAccent = () => {
+      seq.setAccentAmount(Number(accentInput.value) / 100);
+    };
+    accentInput.addEventListener('input', syncAccent);
+    syncAccent();
 
     // patterns
     Object.keys(PATTERNS).forEach((key) => {

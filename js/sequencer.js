@@ -17,6 +17,7 @@
     rock: {
       name: 'Rock',
       bpm: 110,
+      accent: [0, 4, 8, 12],
       grid: (() => {
         const g = EMPTY();
         // Classic rock: BD on 1,9  SD on 5,13  CH on 8ths
@@ -31,6 +32,7 @@
     hiphop: {
       name: 'Hip-Hop',
       bpm: 90,
+      accent: [0, 4, 12],
       grid: (() => {
         const g = EMPTY();
         [0, 7, 10].forEach((s) => (g.BD[s] = 1));
@@ -45,6 +47,7 @@
     electro: {
       name: 'Electro',
       bpm: 128,
+      accent: [0, 4, 8, 12],
       grid: (() => {
         const g = EMPTY();
         [0, 8, 10].forEach((s) => (g.BD[s] = 1));
@@ -68,6 +71,9 @@
       this.playing = false;
       this.currentStep = 0;
       this.grid = EMPTY();
+      // 808-style global accent track: one accent per step, all instruments
+      this.accent = new Array(STEPS).fill(0);
+      this.accentAmount = 0.5; // 0..1, like the 808's ACCENT knob
       this._timer = null;
       this._nextNoteTime = 0;
       this.onStep = null; // (stepIndex) => void
@@ -79,6 +85,17 @@
 
     clear() {
       this.grid = EMPTY();
+      this.accent = new Array(STEPS).fill(0);
+    }
+
+    setAccentAmount(v) {
+      this.accentAmount = Math.max(0, Math.min(1, Number(v) || 0));
+    }
+
+    toggleAccent(step) {
+      if (step < 0 || step >= STEPS) return 0;
+      this.accent[step] = this.accent[step] ? 0 : 1;
+      return this.accent[step];
     }
 
     loadPattern(key) {
@@ -91,6 +108,11 @@
       // ensure all instruments exist
       (global.TR808.INSTRUMENTS || []).forEach((inst) => {
         if (!this.grid[inst.id]) this.grid[inst.id] = new Array(STEPS).fill(0);
+      });
+      // 808-style accent track defaults
+      this.accent = new Array(STEPS).fill(0);
+      (p.accent || []).forEach((s) => {
+        if (s >= 0 && s < STEPS) this.accent[s] = 1;
       });
       this.setBpm(p.bpm);
     }
@@ -151,9 +173,10 @@
 
     _scheduleStep(step, when) {
       const instruments = global.TR808.INSTRUMENTS || [];
+      const vel = this.accent[step] ? 1 + this.accentAmount : 1;
       for (const inst of instruments) {
         if (this.grid[inst.id] && this.grid[inst.id][step]) {
-          this.machine.trigger(inst.id, when, 1);
+          this.machine.trigger(inst.id, when, vel);
         }
       }
     }

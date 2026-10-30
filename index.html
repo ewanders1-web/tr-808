@@ -35,6 +35,8 @@
         <button type="button" class="btn btn-stop ctrl" id="btn-stop">STOP</button>
         <button type="button" class="btn btn-clear ctrl" id="btn-clear">CLEAR</button>
 
+        <button type="button" class="btn btn-listen ctrl" id="btn-listen" aria-haspopup="dialog">LISTEN</button>
+
         <label class="ctrl">
           <span class="lbl">BPM</span>
           <input type="range" id="bpm" min="60" max="180" value="110" />
@@ -72,8 +74,46 @@
       </p>
     </div>
 
+    <div class="listen-overlay" id="listen-panel" role="dialog" aria-modal="true" aria-labelledby="listen-title" hidden>
+      <div class="listen-sheet">
+        <div class="listen-head">
+          <h2 id="listen-title">Listen &amp; Recreate</h2>
+          <button type="button" class="listen-close" id="listen-close" aria-label="Close">✕</button>
+        </div>
+        <p class="listen-hint">Play a beat near the mic (or load an audio file) and the 808 will try to rebuild it as a 1-bar pattern.</p>
+
+        <div class="listen-dur" role="group" aria-label="Recording length">
+          <span class="lbl">Length</span>
+          <button type="button" class="chip" data-sec="4">4s</button>
+          <button type="button" class="chip on" data-sec="8">8s</button>
+          <button type="button" class="chip" data-sec="12">12s</button>
+        </div>
+
+        <div class="listen-actions">
+          <button type="button" class="btn btn-rec" id="listen-rec">● LISTEN</button>
+          <label class="btn btn-file" for="listen-file">LOAD FILE</label>
+          <input type="file" id="listen-file" accept="audio/*" hidden />
+        </div>
+
+        <div class="listen-meter" aria-hidden="true"><div class="listen-meter-fill" id="listen-meter"></div></div>
+        <p class="listen-status" id="listen-status" role="status" aria-live="polite">Ready.</p>
+
+        <div class="listen-result" id="listen-result" hidden>
+          <div class="listen-bpm">Detected <strong id="listen-bpm">—</strong> BPM <span id="listen-conf"></span></div>
+          <div class="listen-preview" id="listen-preview"></div>
+          <p class="listen-note">This is an approximation: tempo, hit timing and drum types are guessed from the audio. Edit steps after applying.</p>
+          <div class="listen-actions">
+            <button type="button" class="btn btn-apply" id="listen-apply">APPLY TO SEQUENCER</button>
+            <button type="button" class="btn" id="listen-discard">DISCARD</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="js/audio.js"></script>
     <script src="js/sequencer.js"></script>
+    <script src="js/beat-analysis.js"></script>
+    <script src="js/listen.js"></script>
     <script src="js/app.js"></script>
   </body>
 </html>

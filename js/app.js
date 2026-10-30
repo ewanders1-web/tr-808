@@ -321,6 +321,9 @@
     buildSeqGrid();
     bindControls();
     updateAudioBadge();
+    // Hooks for optional modules (Listen & Recreate)
+    window.TR808.app = { machine, seq, renderGrid, unlockAudio, unlockHtmlAudio };
+    if (window.TR808.Listen) window.TR808.Listen.init(window.TR808.app);
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     }

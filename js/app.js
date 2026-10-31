@@ -325,7 +325,16 @@
     window.TR808.app = { machine, seq, renderGrid, unlockAudio, unlockHtmlAudio };
     if (window.TR808.Listen) window.TR808.Listen.init(window.TR808.app);
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
+      const hadController = !!navigator.serviceWorker.controller;
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || reloaded) return;
+        reloaded = true;
+        window.location.reload();
+      });
+      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+        .then((r) => r.update && r.update())
+        .catch(() => {});
     }
   }
 

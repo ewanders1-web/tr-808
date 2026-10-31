@@ -663,3 +663,22 @@ select#pattern {
   background: var(--led-on);
   box-shadow: 0 0 5px rgba(255, 120, 30, 0.5);
 }
+
+/* —— Live "show the beats" view —— */
+.listen-live[hidden] { display: none; }
+.listen-live { margin: 4px 0 12px; }
+.ll-flash { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 10px; }
+.ll-flash span {
+  --c: var(--orange);
+  text-align: center; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em;
+  padding: 10px 0; border-radius: 6px; border: 1px solid #333; background: var(--pad-bg, #222);
+  color: var(--muted); transition: background 160ms ease-out, color 160ms, box-shadow 160ms;
+}
+.ll-flash span.hit {
+  background: var(--c); color: #111; border-color: var(--c);
+  box-shadow: 0 0 14px var(--c); transition: none;
+}
+.ll-count { color: var(--muted); font-size: 0.7rem; }
+.ll-strip { display: block; width: 100%; height: 72px; margin: 4px 0 10px; background: #0c0c0e; border: 1px solid var(--edge); border-radius: 6px; }
+.lp-cell.ph { outline: 2px solid var(--led-play); outline-offset: -1px; }
+.lp-cell.lv { background: var(--c, var(--led-on)); }

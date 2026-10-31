@@ -233,24 +233,27 @@
     });
     const ref = (k) => pct(feats.map((x) => x[k]), 0.9) || 1;
     const R = { low: ref('low'), lmid: ref('lmid'), mid: ref('mid'), high: ref('high'), eHigh: ref('eHigh') };
-    return feats.map((x) => {
-      const v = {};
-      const nl = x.low / R.low, nlm = x.lmid / R.lmid, nm = x.mid / R.mid, nh = x.high / R.high;
-      if (nl > 0.45 && x.eLow > x.eLmid) v.BD = nl;
-      // snare / clap: strong mid-band attack whose body sits above the kick
-      // (a kick's click also shows mid flux, but its energy is all < 150 Hz)
-      const bodyRatio = (x.eLmid + x.eMid) / (x.eLow + 1e-12);
-      if (nm > 0.5 && bodyRatio > (v.BD ? 0.35 : 1.5)) {
-        const tonal = x.eLmid / (x.eMid + 1e-12); // 808 snare has 180-330 Hz body
-        v[tonal > 3 ? 'SD' : 'CP'] = nm;
-      }
-      if (!(v.SD || v.CP) && x.eHigh / R.eHigh > 0.08 && nh > 0.1) {
-        // open hat rings; if cut short by the next onset, judge relative to the gap
-        const open = x.decay > 0.16 || (x.decay >= x.cut - 0.02 && x.cut > 0.12 && x.decay > 0.1);
-        v[open ? 'OH' : 'CH'] = x.eHigh / R.eHigh;
-      }
-      return v;
-    });
+    return feats.map((x) => voiceOf(x, R));
+  }
+
+  // Classify one hit's feature vector against reference levels R
+  function voiceOf(x, R) {
+    const v = {};
+    const nl = x.low / R.low, nm = x.mid / R.mid, nh = x.high / R.high;
+    if (nl > 0.45 && x.eLow > x.eLmid) v.BD = nl;
+    // snare / clap: strong mid-band attack whose body sits above the kick
+    // (a kick's click also shows mid flux, but its energy is all < 150 Hz)
+    const bodyRatio = (x.eLmid + x.eMid) / (x.eLow + 1e-12);
+    if (nm > 0.5 && bodyRatio > (v.BD ? 0.35 : 1.5)) {
+      const tonal = x.eLmid / (x.eMid + 1e-12); // 808 snare has 180-330 Hz body
+      v[tonal > 3 ? 'SD' : 'CP'] = nm;
+    }
+    if (!(v.SD || v.CP) && x.eHigh / R.eHigh > 0.08 && nh > 0.1) {
+      // open hat rings; if cut short by the next onset, judge relative to the gap
+      const open = x.decay > 0.16 || (x.decay >= x.cut - 0.02 && x.cut > 0.12 && x.decay > 0.1);
+      v[open ? 'OH' : 'CH'] = x.eHigh / R.eHigh;
+    }
+    return v;
   }
 
   // —— Main ——————————————————————————————————————————————————————————
@@ -346,6 +349,191 @@
     };
   }
 
+
+  // —— Streaming (live) detection ————————————————————————————————————
+  // Incremental version of spectrogram + pickOnsets + classify for the
+  // live "show the beats" view. Feed raw mic/file chunks with push();
+  // it returns newly classified hits [{t, s, v, id}] (t in seconds).
+  function growable(n) { return { a: new Float32Array(n), n: 0 }; }
+  function gpush(g, v) {
+    if (g.n >= g.a.length) { const b = new Float32Array(g.a.length * 2); b.set(g.a); g.a = b; }
+    g.a[g.n++] = v;
+  }
+  const ORDER = ['BD', 'SD', 'CP', 'OH', 'CH'];
+  function primary(v) {
+    let best = null, bs = -1;
+    for (const id of ORDER) if (v[id] != null && v[id] > bs) { bs = v[id]; best = id; }
+    return best;
+  }
+
+  function createStream(sampleRate) {
+    const f = sampleRate >= 32000 ? Math.round(sampleRate / 22050) : 1;
+    const sr = sampleRate / f, hop = 128, fr = sr / hop, half = N / 2;
+    const fft = makeFFT(N);
+    const win = new Float32Array(N);
+    for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / N);
+    const binHz = sr / N;
+    const bin = (hz) => Math.min(half, Math.max(1, Math.round(hz / binHz)));
+    const B = { low: [bin(30), bin(150)], lmid: [bin(150), bin(500)], mid: [bin(500), bin(2500)], high: [bin(5000), half] };
+    const x = growable(sr * 16);
+    const G = () => growable(4096);
+    const flux = G(), centroid = G();
+    const bflux = { low: G(), lmid: G(), mid: G(), high: G() };
+    const bands = { low: G(), lmid: G(), mid: G(), high: G() };
+    const env = G(); // peak per 256 decimated samples (~11.6 ms)
+    let envAcc = 0, envCnt = 0, dAcc = 0, dCnt = 0;
+    const re = new Float32Array(N), im = new Float32Array(N);
+    let prev = new Float32Array(half + 1), cur = new Float32Array(half + 1);
+    let nFrames = 0, runMax = 0, lastOn = -1e9, scanned = 1;
+    const onsets = []; // {f, s}
+    const feats = []; // per classified onset
+    const hits = [];
+    const w = Math.round(0.1 * fr), minGap = Math.round(0.045 * fr), look = Math.round(0.22 * fr);
+    const lat = (N / 2) / sr * 0.5;
+
+    function frame() {
+      const o = nFrames * hop, X = x.a;
+      for (let i = 0; i < N; i++) { re[i] = X[o + i] * win[i]; im[i] = 0; }
+      fft(re, im);
+      let fl = 0, cw = 0, ct = 0, bl = 0, blm = 0, bm = 0, bh = 0;
+      const e = { low: 0, lmid: 0, mid: 0, high: 0 };
+      for (let k = 1; k <= half; k++) {
+        const m2 = re[k] * re[k] + im[k] * im[k];
+        const lm = Math.log1p(1000 * Math.sqrt(m2));
+        cur[k] = lm;
+        const d = lm - prev[k];
+        if (d > 0) {
+          fl += d;
+          if (k < B.low[1]) bl += d; else if (k < B.lmid[1]) blm += d; else if (k < B.mid[1]) bm += d; else if (k >= B.high[0]) bh += d;
+        }
+        if (k >= B.low[0] && k < B.low[1]) e.low += m2;
+        else if (k >= B.lmid[0] && k < B.lmid[1]) e.lmid += m2;
+        else if (k >= B.mid[0] && k < B.mid[1]) e.mid += m2;
+        else if (k >= B.high[0] && k < B.high[1]) e.high += m2;
+        cw += m2 * k; ct += m2;
+      }
+      gpush(flux, fl); gpush(centroid, ct > 0 ? (cw / ct) * binHz : 0);
+      gpush(bflux.low, bl); gpush(bflux.lmid, blm); gpush(bflux.mid, bm); gpush(bflux.high, bh);
+      for (const k in e) gpush(bands[k], e[k]);
+      const t = prev; prev = cur; cur = t;
+      nFrames++;
+    }
+
+    function pick() {
+      const F = flux.a;
+      while (scanned < nFrames - 1) {
+        const i = scanned++;
+        runMax = Math.max(F[i], runMax * 0.9995);
+        if (F[i] < F[i - 1] || F[i] < F[i + 1]) continue;
+        const a = Math.max(0, i - w), b = Math.min(nFrames, i + w);
+        let s = 0;
+        for (let j = a; j < b; j++) s += F[j];
+        const thr = (s / (b - a)) * 1.3 + 0.06 * runMax;
+        if (F[i] < thr || F[i] < 0.12 * runMax) continue;
+        if (i - lastOn < minGap) {
+          const l = onsets[onsets.length - 1];
+          if (l && !l.done && F[i] > l.s) { l.f = i; l.s = F[i]; lastOn = i; }
+          continue;
+        }
+        onsets.push({ f: i, s: F[i], done: false });
+        lastOn = i;
+      }
+    }
+
+    function featAt(idx) {
+      const fI = onsets[idx].f;
+      const nextF = idx + 1 < onsets.length ? onsets[idx + 1].f : nFrames;
+      const at = (g, q) => Math.max(g.a[q] || 0, g.a[q + 1] || 0, g.a[q - 1] || 0);
+      const H = bands.high.a;
+      const hFloor = 1e-9 + pct(H.subarray(0, nFrames), 0.1);
+      const p0 = Math.max(H[fI], H[fI + 1] || 0, H[fI + 2] || 0);
+      let d = 0;
+      const lim = Math.min(nFrames, nextF, fI + Math.round(0.6 * fr));
+      for (let k = fI + 2; k < lim; k++) { if (H[k] < Math.max(p0 * 0.03, hFloor * 3)) break; d++; }
+      const sum = (g) => { let s = 0; for (let k = fI; k < Math.min(nFrames, fI + 6); k++) s += g.a[k]; return s; };
+      return {
+        low: at(bflux.low, fI), lmid: at(bflux.lmid, fI), mid: at(bflux.mid, fI), high: at(bflux.high, fI),
+        eLow: sum(bands.low), eLmid: sum(bands.lmid), eMid: sum(bands.mid), eHigh: Math.max(0, sum(bands.high) - 6 * hFloor),
+        cent: centroid.a[fI + 1] || centroid.a[fI], decay: d / fr, cut: (lim - fI) / fr,
+      };
+    }
+
+    function classifyReady(flush) {
+      const out = [];
+      for (let idx = 0; idx < onsets.length; idx++) {
+        const o = onsets[idx];
+        if (o.done) continue;
+        if (!flush && nFrames < o.f + look && idx === onsets.length - 1) break;
+        if (!flush && nFrames < o.f + look && onsets[idx + 1].f > nFrames) break;
+        o.done = true;
+        const ft = featAt(idx);
+        feats.push(ft);
+        const ref = (k) => pct(feats.map((q) => q[k]), 0.9) || 1;
+        const R = { low: ref('low'), lmid: ref('lmid'), mid: ref('mid'), high: ref('high'), eHigh: ref('eHigh') };
+        const v = voiceOf(ft, R);
+        const h = { t: o.f / fr, s: o.s, v, id: primary(v) };
+        hits.push(h);
+        out.push(h);
+      }
+      return out;
+    }
+
+    function push(chunk, flush) {
+      for (let i = 0; i < chunk.length; i++) {
+        dAcc += chunk[i]; dCnt++;
+        if (dCnt === f) {
+          const v = dAcc / f;
+          gpush(x, v);
+          dAcc = 0; dCnt = 0;
+          const av = Math.abs(v);
+          if (av > envAcc) envAcc = av;
+          if (++envCnt === 256) { gpush(env, envAcc); envAcc = 0; envCnt = 0; }
+        }
+      }
+      while ((nFrames * hop) + N <= x.n) frame();
+      pick();
+      return classifyReady(!!flush);
+    }
+
+    function tempo() {
+      const ons = onsets.filter((o) => o.done);
+      if (nFrames / fr < 2 || ons.length < 4) return null;
+      return estimateTempo(Array.from(flux.a.subarray(0, nFrames)), fr, ons);
+    }
+
+    // Fold hits so far onto a 16-step bar at the given tempo
+    function liveGrid(tp) {
+      const step = 60 / tp.bpm / 4;
+      const ks = hits.map((h) => Math.round((h.t - lat - tp.phase) / step));
+      // bar origin: same musical-plausibility score as analyze() uses
+      const res = { BD: new Array(16).fill(0), SN: new Array(16).fill(0) };
+      hits.forEach((h, i) => {
+        const m = ((ks[i] % 16) + 16) % 16;
+        if (h.id === 'BD') res.BD[m]++;
+        else if (h.id === 'SD' || h.id === 'CP') res.SN[m]++;
+      });
+      let r = 0, bsc = -Infinity;
+      for (let q = 0; q < 16; q++) {
+        const at = (arr, s) => arr[(s + q) % 16];
+        const sc = at(res.BD, 0) * 4 + at(res.BD, 8) * 1.5 + (at(res.SN, 4) + at(res.SN, 12)) * 2.5 - at(res.SN, 0) * 2;
+        if (sc > bsc) { bsc = sc; r = q; }
+      }
+      const grid = {};
+      hits.forEach((h, i) => {
+        const s = (((ks[i] - r) % 16) + 16) % 16;
+        if (h.id) (grid[h.id] = grid[h.id] || new Array(16).fill(0))[s]++;
+      });
+      return { grid, origin: r, step, lat };
+    }
+
+    return {
+      push, tempo, liveGrid, hits, sr, lat,
+      get duration() { return x.n / sr; },
+      get env() { return env.a.subarray(0, env.n); },
+      envRate: sr / 256,
+    };
+  }
+
   global.TR808 = global.TR808 || {};
-  global.TR808.BeatAnalysis = { analyze, toMono, makeFFT };
+  global.TR808.BeatAnalysis = { analyze, toMono, makeFFT, createStream, voiceOf, primary };
 })(typeof window !== 'undefined' ? window : globalThis);

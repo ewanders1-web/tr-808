@@ -98,8 +98,18 @@
         <div class="listen-meter" aria-hidden="true"><div class="listen-meter-fill" id="listen-meter"></div></div>
         <p class="listen-status" id="listen-status" role="status" aria-live="polite">Ready.</p>
 
+        <div class="listen-live" id="listen-live" hidden>
+          <div class="ll-flash" id="listen-flash" aria-hidden="true">
+            <span data-id="BD">BD</span><span data-id="SD">SD</span><span data-id="CP">CP</span><span data-id="CH">CH</span><span data-id="OH">OH</span>
+          </div>
+          <div class="listen-bpm">Tempo <strong id="listen-live-bpm">—</strong> BPM <span class="ll-count" id="listen-live-count">0 hits</span></div>
+          <canvas class="ll-strip" id="listen-strip" aria-label="Detected hits timeline"></canvas>
+          <div class="listen-preview ll-grid" id="listen-live-grid"></div>
+        </div>
+
         <div class="listen-result" id="listen-result" hidden>
           <div class="listen-bpm">Detected <strong id="listen-bpm">—</strong> BPM <span id="listen-conf"></span></div>
+          <canvas class="ll-strip" id="listen-timeline" aria-label="Hits heard"></canvas>
           <div class="listen-preview" id="listen-preview"></div>
           <p class="listen-note">This is an approximation: tempo, hit timing and drum types are guessed from the audio. Edit steps after applying.</p>
           <div class="listen-actions">
